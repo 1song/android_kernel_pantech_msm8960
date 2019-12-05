@@ -2271,54 +2271,6 @@ void rmi_clear_finger(struct input_dev *input)
 	input_sync(input);
 }
 
-
-
-#if RESUME_REZERO
-static int rmi_f11_suspend(struct rmi_function_container *fc)
-{
-	struct f11_data *f11 = fc->data;
-	/* Command register always reads as 0, so we can just use a local. */
-	int retval = 0, i =0;
-
-	if(pantech_touch_debug)
-		printk("[Touch] RMI F11 suspend\n");
-
-	for (i = 0; i < (f11->dev_query.nbr_of_sensors + 1); i++) {
-		if (f11->sensors[i].input)
-			rmi_clear_finger(f11->sensors[i].input);
-	}
-
-	return retval;
-}
-
-static int rmi_f11_resume(struct rmi_function_container *fc)
-{
-	struct rmi_device *rmi_dev = fc->rmi_dev;
-	struct f11_data *data = fc->data;
-	/* Command register always reads as 0, so we can just use a local. */
-	union f11_2d_commands commands = {};
-	int retval = 0;
-
-	dev_dbg(&fc->dev, "Resuming...\n");
-	if (!data->rezero_on_resume)
-		return 0;
-
-	if (data->rezero_wait_ms)
-		mdelay(data->rezero_wait_ms);
-
-	commands.rezero = 1;
-	retval = rmi_write_block(rmi_dev, fc->fd.command_base_addr,
-			&commands.reg, sizeof(commands.reg));
-	if (retval < 0) {
-		dev_err(&rmi_dev->dev, "%s: failed to issue rezero command, error = %d.",
-			__func__, retval);
-		return retval;
-	}
-
-	return retval;
-}
-#endif /* RESUME_REZERO */
-
 static void rmi_f11_remove(struct rmi_function_container *fc)
 {
 	int attr_count = 0;
@@ -2348,16 +2300,6 @@ static struct rmi_function_handler function_handler = {
 	.reset = rmi_f11_reset,
 	.attention = rmi_f11_attention,
 	.remove = rmi_f11_remove,
-#if	RESUME_REZERO
-#if defined(CONFIG_HAS_EARLYSUSPEND) && \
-			!defined(CONFIG_RMI4_SPECIAL_EARLYSUSPEND)
-	.late_resume = rmi_f11_resume,
-	.early_suspend = rmi_f11_suspend
-#else
-	.resume = rmi_f11_resume
-	.suspend = rmi_f11_suspend
-#endif  /* defined(CONFIG_HAS_EARLYSUSPEND) && !def... */
-#endif
 };
 
 static int __init rmi_f11_module_init(void)

@@ -50,6 +50,8 @@ static DEFINE_SPINLOCK(events_lock);
 
 static void pm_wakeup_timer_fn(unsigned long data);
 
+static DECLARE_WAIT_QUEUE_HEAD(wakeup_count_wait_queue);
+
 static LIST_HEAD(wakeup_sources);
 
 /**
